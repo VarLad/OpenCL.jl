@@ -4,7 +4,7 @@
 
 # NOTE: these functions now unsafely truncate to Int to avoid top bit checks.
 #       we should probably use range metadata instead.
-
+export intel_shuffle_down
 # 1D values
 for (julia_name, (spirv_name, julia_type, offset)) in [
         # indices
@@ -62,3 +62,16 @@ for (julia_name, (spirv_name, offset)) in [
                 """, "entry"), UInt, Tuple{UInt}, UInt(dimindx - 1u32)) % Int + $offset
     end
 end
+
+@device_function intel_shfl_down(current::Float32, next::Float32, delta::Int32) =
+    Base.llvmcall(("""
+        declare f32 @__spirv_SubgroupShuffleDownINTEL(f32, f32, i32) #0
+        define f32 @entry(f32 current, f32 next, i32 delta) #1 {
+            %res = call f32 @__spirv_SubgroupShuffleDownINTEL(f32 current, f32 next, i32 delta)
+            ret f32 %res
+        }
+        attributes #0 = { convergent }
+        attributes #1 = { alwaysinline }
+    """, "entry"),
+    Float32, Tuple{Float32, Float32, Int32}, current, next, delta)
+
